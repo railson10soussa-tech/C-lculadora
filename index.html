@@ -1,0 +1,396 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Futebol - Súmula Math Club</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Orbitron:wght@600;800;900&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0d1f12;
+            background-image: radial-gradient(#1e3a24 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .font-led {
+            font-family: 'Orbitron', monospace;
+        }
+
+        .font-stadium {
+            font-family: 'Chakra Petch', sans-serif;
+        }
+
+        /* Estilo do Campo de Futebol */
+        .pitch-bg {
+            background: linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%);
+            position: relative;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+            border: 4px solid #ffffff;
+        }
+
+        /* Linhas do Campo */
+        .pitch-lines {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.25;
+            background: 
+                linear-gradient(to right, transparent 49%, rgba(255,255,255,0.8) 50%, transparent 51%),
+                radial-gradient(circle at center, transparent 30%, rgba(255,255,255,0.8) 31%, transparent 32%);
+        }
+
+        .pitch-penalty-area-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 18%;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top: none;
+            pointer-events: none;
+        }
+
+        /* Placar LED */
+        .led-display {
+            background: #08120a;
+            border: 3px solid #eab308; /* Borda Dourada de Troféu */
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9), 0 0 15px rgba(234, 179, 8, 0.3);
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+        }
+
+        /* Botões Estilo Bola de Futebol & Gramado */
+        .btn-pitch {
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.4);
+        }
+
+        .btn-pitch:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+        }
+
+        /* Animações e Efeitos */
+        @keyframes goalPulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+
+        .goal-banner {
+            animation: goalPulse 1.8s ease-out forwards;
+        }
+
+        /* Custom Scrollbar para a Súmula */
+        .sumula-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sumula-scroll::-webkit-scrollbar-track {
+            background: #0f2918;
+            border-radius: 4px;
+        }
+        .sumula-scroll::-webkit-scrollbar-thumb {
+            background: #22c55e;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 sm:p-6 text-white select-none">
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LADO ESQUERDO/CENTRAL: CALCULADORA -->
+        <div class="lg:col-span-7 w-full flex flex-col items-center">
+            
+            <!-- Estádio Outer Frame -->
+            <div class="w-full pitch-bg rounded-3xl p-4 sm:p-6 border-4 border-white/80 shadow-2xl overflow-hidden relative">
+                <div class="pitch-lines"></div>
+                <div class="pitch-penalty-area-top"></div>
+
+                <!-- Cabeçalho / Placar Superior -->
+                <div class="relative z-10 flex justify-between items-center mb-4 bg-black/40 p-3 rounded-2xl border border-white/20 backdrop-blur-sm">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid font-bold text-yellow-400 text-xl fa-trophy"></i>
+                        <span class="font-stadium font-bold text-lg tracking-wider text-yellow-400 uppercase">MATH CUP 2026</span>
+                    </div>
+
+                    <!-- Botões de Controle (Som & Tema) -->
+                    <div class="flex items-center space-x-3">
+                        <button id="soundToggleBtn" onclick="toggleSound()" class="p-2 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-300 rounded-xl transition border border-emerald-500/30 flex items-center gap-1.5 text-xs font-bold" title="Ativar/Desativar Efeitos Sonoros">
+                            <i id="soundIcon" class="fa-solid fa-volume-high text-yellow-400"></i>
+                            <span id="soundStatusText">SOM ON</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DISPLAY LED DA CALCULADORA -->
+                <div class="relative z-10 mb-5">
+                    <div class="led-display rounded-2xl p-4 flex flex-col justify-between h-32 text-right relative overflow-hidden">
+                        
+                        <!-- Mini Placar Indicador de Operação -->
+                        <div class="flex justify-between items-center text-xs text-emerald-500 font-stadium tracking-widest uppercase">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-futbol text-emerald-400"></i> ARENA MATH</span>
+                            <span id="operationDisplay" class="text-yellow-400 font-led text-sm truncate max-w-[200px] sm:max-w-[280px]">0</span>
+                        </div>
+
+                        <!-- Número Principal -->
+                        <div id="mainDisplay" class="font-led text-3xl sm:text-4xl text-emerald-400 font-bold tracking-wider truncate py-1">
+                            0
+                        </div>
+
+                        <!-- Indicador de Status / Cartão -->
+                        <div class="flex justify-between items-center text-[10px] text-emerald-600/80 font-mono">
+                            <div class="flex gap-2">
+                                <span id="cardYellow" class="w-3 h-4 bg-yellow-400/30 rounded-sm inline-block"></span>
+                                <span id="cardRed" class="w-3 h-4 bg-red-500/30 rounded-sm inline-block"></span>
+                            </div>
+                            <span id="modeStatus">PRONTO PARA O CHUTE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OVERLAY ANIMAÇÃO DE GOL -->
+                <div id="goalOverlay" class="hidden absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
+                    <h1 class="goal-banner font-stadium text-5xl sm:text-7xl font-extrabold text-yellow-400 tracking-widest italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] border-y-4 border-yellow-400 py-2 px-8 bg-green-900/90 rounded-2xl uppercase">
+                        GOOOOOOL!
+                    </h1>
+                    <p id="goalMathResult" class="font-led text-2xl text-white mt-4 bg-emerald-600 px-4 py-1 rounded-full border border-yellow-300">
+                        = 0
+                    </p>
+                </div>
+
+                <!-- TECLADO DA CALCULADORA -->
+                <div class="relative z-10 grid grid-cols-4 gap-2.5 sm:gap-3">
+                    
+                    <!-- Linha 1 -->
+                    <button onclick="clearAll()" class="btn-pitch bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-xl text-lg sm:text-xl border border-red-400">
+                        C
+                    </button>
+                    <button onclick="clearEntry()" class="btn-pitch bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 rounded-xl text-lg sm:text-xl border border-amber-400">
+                        CE
+                    </button>
+                    <button onclick="backspace()" class="btn-pitch bg-slate-700 hover:bg-slate-600 text-yellow-400 font-bold py-3.5 rounded-xl text-lg sm:text-xl border border-slate-500">
+                        <i class="fa-solid fa-delete-left"></i>
+                    </button>
+                    <button onclick="setOperation('/')" class="btn-pitch bg-emerald-950 hover:bg-emerald-900 text-yellow-400 font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-yellow-500/50">
+                        ÷
+                    </button>
+
+                    <!-- Linha 2 -->
+                    <button onclick="appendNumber('7')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        7
+                    </button>
+                    <button onclick="appendNumber('8')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        8
+                    </button>
+                    <button onclick="appendNumber('9')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        9
+                    </button>
+                    <button onclick="setOperation('*')" class="btn-pitch bg-emerald-950 hover:bg-emerald-900 text-yellow-400 font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-yellow-500/50">
+                        ×
+                    </button>
+
+                    <!-- Linha 3 -->
+                    <button onclick="appendNumber('4')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        4
+                    </button>
+                    <button onclick="appendNumber('5')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        5
+                    </button>
+                    <button onclick="appendNumber('6')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        6
+                    </button>
+                    <button onclick="setOperation('-')" class="btn-pitch bg-emerald-950 hover:bg-emerald-900 text-yellow-400 font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-yellow-500/50">
+                        −
+                    </button>
+
+                    <!-- Linha 4 -->
+                    <button onclick="appendNumber('1')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        1
+                    </button>
+                    <button onclick="appendNumber('2')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        2
+                    </button>
+                    <button onclick="appendNumber('3')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        3
+                    </button>
+                    <button onclick="setOperation('+')" class="btn-pitch bg-emerald-950 hover:bg-emerald-900 text-yellow-400 font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-yellow-500/50">
+                        +
+                    </button>
+
+                    <!-- Linha 5 -->
+                    <button onclick="appendPercentage()" class="btn-pitch bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-3.5 rounded-xl text-lg sm:text-xl border border-emerald-500/30">
+                        %
+                    </button>
+                    <button onclick="appendNumber('0')" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        0
+                    </button>
+                    <button onclick="appendDecimal()" class="btn-pitch bg-slate-900/90 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-xl sm:text-2xl border border-white/20">
+                        ,
+                    </button>
+                    
+                    <!-- Botão de Gol (Igual) -->
+                    <button onclick="calculateResult()" class="btn-pitch bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-extrabold py-3.5 rounded-xl text-2xl border-2 border-yellow-200 shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-futbol text-xl animate-spin" style="animation-duration: 8s;"></i>
+                        =
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LADO DIREITO: SÚMULA DE JOGO (HISTÓRICO) -->
+        <div class="lg:col-span-5 w-full">
+            <div class="bg-slate-900/90 border-2 border-emerald-600/50 rounded-3xl p-5 shadow-xl backdrop-blur-md flex flex-col h-[520px]">
+                
+                <!-- Cabeçalho da Súmula -->
+                <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-700">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-clipboard-list text-yellow-400 text-xl"></i>
+                        <h2 class="font-stadium font-bold text-lg text-white uppercase tracking-wider">Súmula da Partida</h2>
+                    </div>
+                    <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-950/50 px-2.5 py-1 rounded-lg border border-red-800/40 transition">
+                        <i class="fa-solid fa-trash-can"></i> Limpar
+                    </button>
+                </div>
+
+                <!-- Lista de Lances / Cálculos -->
+                <div id="historyList" class="sumula-scroll flex-1 overflow-y-auto space-y-2.5 pr-1">
+                    <!-- Item de Exemplo / Estado Vazio -->
+                    <div id="emptyHistoryNotice" class="text-center py-16 text-slate-500 flex flex-col items-center">
+                        <i class="fa-solid fa-whistle text-4xl mb-2 opacity-40"></i>
+                        <p class="text-sm font-stadium">Nenhum lance registrado ainda.</p>
+                        <p class="text-xs text-slate-600 mt-1">Realize contas para registrar os gols!</p>
+                    </div>
+                </div>
+
+                <!-- Rodapé da Súmula com Estatísticas -->
+                <div class="pt-3 mt-3 border-t border-slate-700/80 flex justify-between items-center text-xs text-slate-400 font-mono">
+                    <span>TOTAL DE LANCES: <strong id="totalCalculations" class="text-yellow-400">0</strong></span>
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-emerald-400"></i> VAR OK</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ==========================================================
+           ESTADO DA CALCULADORA
+        ========================================================== */
+        let currentInput = '0';
+        let previousInput = '';
+        let currentOperation = null;
+        let shouldResetDisplay = false;
+        let soundEnabled = true;
+        let calculationCount = 0;
+
+        /* ==========================================================
+           SINTETIZADOR DE ÁUDIO (Web Audio API - Sem Arquivos Externos)
+        ========================================================== */
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+        }
+
+        // Toca som sintético de Kick / Chuto
+        function playKickSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Toca som sintético de Apito do Árbitro
+        function playWhistleSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc1.type = 'sine';
+            osc2.type = 'sine';
+            
+            // Apito duplo/trinado típico de futebol
+            osc1.frequency.setValueAtTime(2400, audioCtx.currentTime);
+            osc2.frequency.setValueAtTime(2650, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+            
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc1.start();
+            osc2.start();
+            osc1.stop(audioCtx.currentTime + 0.35);
+            osc2.stop(audioCtx.currentTime + 0.35);
+        }
+
+        // Toca som sintético de Comemoração de Gol
+        function playGoalCheer() {
+            if (!soundEnabled) return;
+            initAudio();
+
+            // Ruído branco filtrado simulando a torcida
+            const bufferSize = audioCtx.sampleRate * 1.5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filter.Q.setValueAtTime(1.5, audioCtx.currentTime);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.4);
+
+            whiteNoise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            whiteNoise.start();
+            whiteNoise.stop(audioCtx.currentTime + 1.4);
+     
